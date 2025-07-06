@@ -1,0 +1,14 @@
+1|friend|друг
+1|I am|я
+1|dictionary|словарь
+1|bucket|корзина
+1|dog|собака
+1|book|книга
+1|кошка|cat
+1|стол|desk
+1|дерево|tree
+1|input file|входной файл
+1|выходной файл|output file
+1|ящик|box
+1|верх|top
+1|низ|down

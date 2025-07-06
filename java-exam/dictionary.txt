@@ -1,0 +1,14 @@
+friend | друг
+I am | я
+dictionary | словарь
+bucket | корзина
+dog | собака
+book | книга
+кошка | cat
+стол | desk
+дерево | tree
+input file | входной файл
+выходной файл | output file
+ящик | box
+верх | top
+низ | down
