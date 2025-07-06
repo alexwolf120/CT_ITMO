@@ -1,0 +1,10 @@
+<RCC>
+    <qresource prefix="/">
+        <file>resourse/click.jpg</file>
+        <file>resourse/flag.png</file>
+        <file>resourse/min2.jpg</file>
+        <file>resourse/question.png</file>
+        <file>resourse/start.jpg</file>
+        <file>resourse/mine_hover.png</file>
+    </qresource>
+</RCC>

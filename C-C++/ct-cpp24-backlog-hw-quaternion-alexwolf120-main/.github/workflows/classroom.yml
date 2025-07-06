@@ -1,0 +1,149 @@
+name: Quaternion Tests
+
+on:
+  - workflow_dispatch
+  - repository_dispatch
+
+permissions:
+  checks: write
+  actions: read
+  contents: read
+
+env:
+  EXE: __test.exe
+
+jobs:
+  clang-format:
+    name: Code formatting check
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: jidicula/clang-format-action@v4.11.0
+        with:
+          clang-format-version: '18'
+          check-path: '.'
+
+  ubuntu:
+    needs: clang-format
+
+    name: "Ubuntu: ${{ matrix.toolchain.cc }}-${{ matrix.toolchain.version }} (${{ matrix.profile }} configuration)"
+
+    strategy:
+      fail-fast: false
+
+      matrix:
+        toolchain:
+          - { cc: clang, version: 17 }
+          - { cc: gcc, version: 11 }
+
+        profile:
+          - Release
+          - Debug
+          - AddressSanitized
+          - LeakSanitized
+          - UndefinedBehaviorSanitized
+          - ThreadSanitized
+
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    container:
+      image: wolandkobayashi/educontainer:dev-${{ matrix.toolchain.cc }}${{ matrix.toolchain.version }}
+      options: --privileged
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: 'main'
+          submodules: true
+  
+      - name: Setup working directory
+        run: |
+          cp *.cpp /student/ 2>/dev/null || :
+          cp *.h /student/ 2>/dev/null || :
+          cp *.hpp /student/ 2>/dev/null || :
+
+      - name: Fixup sanitizers
+        run: sysctl vm.mmap_rnd_bits=28
+
+      - name: Build
+        run: python3 compile.py --name=${{ env.EXE }} --use-profile=${{ matrix.profile }} --std=c++20 --include-libraries=GoogleTest --link-libraries=gtest
+        working-directory: /student
+
+      - name: Run tests
+        run: ./${{ env.EXE }}
+        working-directory: /student
+
+  windows:
+    needs: ubuntu
+
+    name: "Windows: ${{ matrix.toolchain.cc }}-${{ matrix.toolchain.version }} (${{ matrix.profile }} configuration)"
+
+    strategy:
+      fail-fast: false
+
+      matrix:
+        toolchain:
+          - { cc: msvc, version: 17 }
+
+        profile:
+          - Release
+          - Debug
+          - AddressSanitized
+
+    runs-on: windows-2019
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: 'main'
+          submodules: true
+
+      - name: Download scripts
+        uses: actions/checkout@v4
+        with:
+          repository: 'sfbakturin/edu-containers'
+          ref: 'dev'
+          path: 'scripts'
+
+      - name: Install Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install requirements
+        run: pip install pyyaml
+
+      - name: Setup workbench
+        run: |
+          cp scripts/compiler/compile.py .
+          mkdir .compileconfig
+          cp scripts/compiler/.compileconfig/googletest.yml .compileconfig/
+
+      - name: Install GoogleTest (Release)
+        if: ${{ matrix.profile == 'Release' }}
+        env:
+          EDUCONTAINER_GOOGLETEST: 'C:/SDK/googletest'
+          EDUCONTAINER_BUILDTYPE: 'Release'
+        run: powershell scripts/windows/installers/install-gtest.ps1 ${{ env.EDUCONTAINER_BUILDTYPE }}
+
+      - name: Install GoogleTest (Debug/AddressSanitized)
+        if: ${{ matrix.profile != 'Release' }}
+        env:
+          EDUCONTAINER_GOOGLETEST: 'C:/SDK/googletest'
+          EDUCONTAINER_BUILDTYPE: 'Debug'
+        run: powershell scripts/windows/installers/install-gtest.ps1 ${{ env.EDUCONTAINER_BUILDTYPE }}
+
+      - name: Build
+        env:
+          EDUCONTAINER_TARGET_SYSTEM: windows
+          EDUCONTAINER_TARGET_NAME: msvc
+          EDUCONTAINER_MSVC_SETUP: 'C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvars64.bat'
+          EDUCONTAINER_GOOGLETEST: 'C:/SDK/googletest'
+          EDUCONTAINER_GOOGLETEST_INCLUDE: 'C:/SDK/googletest/include'
+          EDUCONTAINER_GOOGLETEST_LIBRARY: 'C:/SDK/googletest/lib'
+        run: python compile.py --name=${{ env.EXE }} --use-profile=${{ matrix.profile }} --std=c++20 --include-libraries=GoogleTest --link-libraries=gtest.lib
+
+      - name: Run tests
+        run: .\${{ env.EXE }}

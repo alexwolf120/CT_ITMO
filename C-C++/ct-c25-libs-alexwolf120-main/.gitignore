@@ -1,0 +1,25 @@
+# Ignore everything.
+*
+
+# Do not ignore source files.
+!*.c
+!*.h
+!src/
+!include/
+
+# Do not ignore clang-format file.
+!.clang-format
+
+# Do not ignore ignoring list.
+!.gitignore
+
+# Do not ignore attribuites.
+!.gitattributes
+
+# Do not ignore README.
+!README.md
+
+# Do not ignore classroom workflow for tests.
+!.github/
+!.github/workflows/
+!.github/workflows/classroom.yml
